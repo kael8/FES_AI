@@ -49,4 +49,4 @@ def predict_sentiment():
     return jsonify({'text': text, 'predicted_sentiment': sentiment, 'prediction_score': float(predictions[0][0])})
 
 if __name__ == '__main__':
-    app.run(port=8080)
+    app.run(debug=True)
