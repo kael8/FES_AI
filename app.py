@@ -8,14 +8,33 @@ from tensorflow.keras.preprocessing.text import Tokenizer
 
 app = Flask(__name__)
 
-# Load the tokenizer state
-tokenizer_state_filename = 'C:/Users/Llesis/Desktop/python/tokenizer_state.pkl'
-with open(tokenizer_state_filename, 'rb') as handle:
-    tokenizer_state = pickle.load(handle)
+# Load and merge the partitioned tokenizer states
+tokenizer_state_filenames = [
+    'C:/Users/Llesis/Desktop/train/tokenizer_parts/tokenizer_state_part0.pkl',
+    'C:/Users/Llesis/Desktop/train/tokenizer_parts/tokenizer_state_part1.pkl'
+]
 
-# Recreate the tokenizer from its configuration
+# Initialize an empty tokenizer
 tokenizer = Tokenizer()
-tokenizer.__dict__.update(tokenizer_state)
+tokenizer.word_index = {}
+tokenizer.index_word = {}
+tokenizer.word_counts = {}
+tokenizer.document_count = 0
+
+# Iterate through each part, load it, and merge it into the complete tokenizer
+for part_filename in tokenizer_state_filenames:
+    with open(part_filename, 'rb') as handle:
+        part_tokenizer_state = pickle.load(handle)
+        
+    part_tokenizer = Tokenizer()
+    part_tokenizer.__dict__.update(part_tokenizer_state)
+    
+    # Merge the part tokenizer into the complete tokenizer
+    tokenizer.word_index.update(part_tokenizer.word_index)
+    tokenizer.word_counts.update(part_tokenizer.word_counts)
+    tokenizer.document_count += part_tokenizer.document_count
+
+# Set the num_words attribute based on your previous information
 tokenizer.num_words = 10000
 
 # Load the trained model
@@ -37,7 +56,7 @@ def predict_sentiment():
 
     max_sequence_length = 100
 
-    # Pad sequences to have consistent length
+    # Pad sequences to have a consistent length
     new_X = pad_sequences(new_sequences, maxlen=max_sequence_length)
 
     # Predict using the loaded model
@@ -45,8 +64,8 @@ def predict_sentiment():
 
     # Determine sentiment based on the prediction
     sentiment = "Positive" if predictions[0][0] >= 0.5 else "Negative"
-
+    
     return jsonify({'text': text, 'predicted_sentiment': sentiment, 'prediction_score': float(predictions[0][0])})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(port=8080)
